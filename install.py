@@ -103,12 +103,12 @@ try:
 
     print("### ComfyUI-Impact-Pack: Check dependencies")
 
-    if "python_embeded" in sys.executable or "python_embedded" in sys.executable:
-        pip_install = [sys.executable, '-s', '-m', 'pip', 'install']
-        mim_install = [sys.executable, '-s', '-m', 'mim', 'install']
-    else:
-        pip_install = [sys.executable, '-m', 'pip', 'install']
-        mim_install = [sys.executable, '-m', 'mim', 'install']
+    # if "python_embeded" in sys.executable or "python_embedded" in sys.executable:
+    #     pip_install = [sys.executable, '-s', '-m', 'pip', 'install']
+    #     mim_install = [sys.executable, '-s', '-m', 'mim', 'install']
+    # else:
+    #     pip_install = [sys.executable, '-m', 'pip', 'install']
+    #     mim_install = [sys.executable, '-m', 'mim', 'install']
 
 
     def ensure_subpack():
@@ -227,29 +227,29 @@ try:
 
 
     def install():
-        remove_olds()
+        # remove_olds()
 
-        subpack_install_script = os.path.join(subpack_path, "install.py")
-
-        print(f"### ComfyUI-Impact-Pack: Updating subpack")
-        ensure_subpack()  # The installation of the subpack must take place before ensure_pip. cv2 triggers a permission error.
-
-        if os.path.exists(subpack_install_script):
-            process_wrap([sys.executable, 'install.py'], cwd=subpack_path)
-            if not is_requirements_installed(os.path.join(subpack_path, 'requirements.txt')):
-                process_wrap(pip_install + ['-r', 'requirements.txt'], cwd=subpack_path)
-        else:
-            print(f"### ComfyUI-Impact-Pack: (Install Failed) Subpack\nFile not found: `{subpack_install_script}`")
-
-        ensure_pip_packages_first()
-
-        if not impact.config.get_config()['mmdet_skip']:
-            ensure_mmdet_package()
-
-        ensure_pip_packages_last()
-
-        # Download model
-        print("### ComfyUI-Impact-Pack: Check basic models")
+        # subpack_install_script = os.path.join(subpack_path, "install.py")
+        #
+        # print(f"### ComfyUI-Impact-Pack: Updating subpack")
+        # ensure_subpack()  # The installation of the subpack must take place before ensure_pip. cv2 triggers a permission error.
+        #
+        # if os.path.exists(subpack_install_script):
+        #     process_wrap([sys.executable, 'install.py'], cwd=subpack_path)
+        #     if not is_requirements_installed(os.path.join(subpack_path, 'requirements.txt')):
+        #         process_wrap(pip_install + ['-r', 'requirements.txt'], cwd=subpack_path)
+        # else:
+        #     print(f"### ComfyUI-Impact-Pack: (Install Failed) Subpack\nFile not found: `{subpack_install_script}`")
+        #
+        # ensure_pip_packages_first()
+        #
+        # if not impact.config.get_config()['mmdet_skip']:
+        #     ensure_mmdet_package()
+        #
+        # ensure_pip_packages_last()
+        #
+        # # Download model
+        # print("### ComfyUI-Impact-Pack: Check basic models")
 
         model_path = folder_paths.models_dir
 
@@ -275,10 +275,10 @@ try:
             print(f"### ComfyUI-Impact-Pack: onnx model directory created ({onnx_path})")
             os.mkdir(onnx_path)
 
-        impact.config.write_config()
+        #impact.config.write_config()
 
 
-    #install()
+    install()
 
 except Exception as e:
     print("[ERROR] ComfyUI-Impact-Pack: Dependency installation has failed. Please install manually.")

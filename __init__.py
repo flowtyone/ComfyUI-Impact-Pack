@@ -66,6 +66,7 @@ try:
         from mmdet.apis import (inference_detector, init_detector)
         from mmdet.evaluation import get_classes
 except:
+    traceback.print_exc()
     import importlib
     print("### ComfyUI-Impact-Pack: Reinstall dependencies (several dependencies are missing.)")
     do_install()
