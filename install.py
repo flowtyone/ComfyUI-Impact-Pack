@@ -278,7 +278,7 @@ try:
         impact.config.write_config()
 
 
-    install()
+    #install()
 
 except Exception as e:
     print("[ERROR] ComfyUI-Impact-Pack: Dependency installation has failed. Please install manually.")

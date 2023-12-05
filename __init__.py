@@ -95,7 +95,7 @@ def setup_js():
         shutil.copy(js_src_path, js_dest_path)
 
 
-setup_js()
+#setup_js()
 
 from impact.impact_pack import *
 from impact.detectors import *
