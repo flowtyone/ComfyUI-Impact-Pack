@@ -26,21 +26,21 @@ import impact.sample_error_enhancer
 print(f"### Loading: ComfyUI-Impact-Pack ({impact.config.version})")
 
 
-def do_install():
-    import importlib
-    spec = importlib.util.spec_from_file_location('impact_install', os.path.join(os.path.dirname(__file__), 'install.py'))
-    impact_install = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(impact_install)
+# def do_install():
+#     import importlib
+#     spec = importlib.util.spec_from_file_location('impact_install', os.path.join(os.path.dirname(__file__), 'install.py'))
+#     impact_install = importlib.util.module_from_spec(spec)
+#     spec.loader.exec_module(impact_install)
 
 
 # ensure dependency
-if not os.path.exists(os.path.join(subpack_path, ".git")) and os.path.exists(subpack_path):
-    print(f"### CompfyUI-Impact-Pack: corrupted subpack detected.")
-    shutil.rmtree(subpack_path)
-
-if impact.config.get_config()['dependency_version'] < impact.config.dependency_version or not os.path.exists(subpack_path):
-    print(f"### ComfyUI-Impact-Pack: Updating dependencies [{impact.config.get_config()['dependency_version']} -> {impact.config.dependency_version}]")
-    do_install()
+# if not os.path.exists(os.path.join(subpack_path, ".git")) and os.path.exists(subpack_path):
+#     print(f"### CompfyUI-Impact-Pack: corrupted subpack detected.")
+#     shutil.rmtree(subpack_path)
+#
+# if impact.config.get_config()['dependency_version'] < impact.config.dependency_version or not os.path.exists(subpack_path):
+#     print(f"### ComfyUI-Impact-Pack: Updating dependencies [{impact.config.get_config()['dependency_version']} -> {impact.config.dependency_version}]")
+#     do_install()
 
 sys.path.append(subpack_path)
 
@@ -68,34 +68,34 @@ try:
 except:
     import importlib
     print("### ComfyUI-Impact-Pack: Reinstall dependencies (several dependencies are missing.)")
-    do_install()
+    #do_install()
 
-import impact.impact_server  # to load server api
+#import impact.impact_server  # to load server api
 
-def setup_js():
-    import nodes
-    js_dest_path = os.path.join(comfy_path, "web", "extensions", "impact-pack")
-
-    if hasattr(nodes, "EXTENSION_WEB_DIRS"):
-        if os.path.exists(js_dest_path):
-            shutil.rmtree(js_dest_path)
-    else:
-        print(f"[WARN] ComfyUI-Impact-Pack: Your ComfyUI version is outdated. Please update to the latest version.")
-        # setup js
-        if not os.path.exists(js_dest_path):
-            os.makedirs(js_dest_path)
-
-        js_src_path = os.path.join(impact_path, "js", "impact-pack.js")
-        shutil.copy(js_src_path, js_dest_path)
-
-        js_src_path = os.path.join(impact_path, "js", "impact-sam-editor.js")
-        shutil.copy(js_src_path, js_dest_path)
-
-        js_src_path = os.path.join(impact_path, "js", "comboBoolMigration.js")
-        shutil.copy(js_src_path, js_dest_path)
-
-
-setup_js()
+# def setup_js():
+#     import nodes
+#     js_dest_path = os.path.join(comfy_path, "web", "extensions", "impact-pack")
+#
+#     if hasattr(nodes, "EXTENSION_WEB_DIRS"):
+#         if os.path.exists(js_dest_path):
+#             shutil.rmtree(js_dest_path)
+#     else:
+#         print(f"[WARN] ComfyUI-Impact-Pack: Your ComfyUI version is outdated. Please update to the latest version.")
+#         # setup js
+#         if not os.path.exists(js_dest_path):
+#             os.makedirs(js_dest_path)
+#
+#         js_src_path = os.path.join(impact_path, "js", "impact-pack.js")
+#         shutil.copy(js_src_path, js_dest_path)
+#
+#         js_src_path = os.path.join(impact_path, "js", "impact-sam-editor.js")
+#         shutil.copy(js_src_path, js_dest_path)
+#
+#         js_src_path = os.path.join(impact_path, "js", "comboBoolMigration.js")
+#         shutil.copy(js_src_path, js_dest_path)
+#
+#
+# setup_js()
 
 from impact.impact_pack import *
 from impact.detectors import *
@@ -421,29 +421,29 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "SEGSSwitch": "Switch (SEGS/legacy)"
 }
 
-if not impact.config.get_config()['mmdet_skip']:
-    from impact.mmdet_nodes import *
-    import impact.legacy_nodes
-    NODE_CLASS_MAPPINGS.update({
-        "MMDetDetectorProvider": MMDetDetectorProvider,
-        "MMDetLoader": impact.legacy_nodes.MMDetLoader,
-        "MaskPainter": impact.legacy_nodes.MaskPainter,
-        "SegsMaskCombine": impact.legacy_nodes.SegsMaskCombine,
-        "BboxDetectorForEach": impact.legacy_nodes.BboxDetectorForEach,
-        "SegmDetectorForEach": impact.legacy_nodes.SegmDetectorForEach,
-        "BboxDetectorCombined": impact.legacy_nodes.BboxDetectorCombined,
-        "SegmDetectorCombined": impact.legacy_nodes.SegmDetectorCombined,
-    })
-
-    NODE_DISPLAY_NAME_MAPPINGS.update({
-        "MaskPainter": "MaskPainter (Deprecated)",
-        "MMDetLoader": "MMDetLoader (Legacy)",
-        "SegsMaskCombine": "SegsMaskCombine (Legacy)",
-        "BboxDetectorForEach": "BboxDetectorForEach (Legacy)",
-        "SegmDetectorForEach": "SegmDetectorForEach (Legacy)",
-        "BboxDetectorCombined": "BboxDetectorCombined (Legacy)",
-        "SegmDetectorCombined": "SegmDetectorCombined (Legacy)",
-    })
+# if not impact.config.get_config()['mmdet_skip']:
+#     from impact.mmdet_nodes import *
+#     import impact.legacy_nodes
+#     NODE_CLASS_MAPPINGS.update({
+#         "MMDetDetectorProvider": MMDetDetectorProvider,
+#         "MMDetLoader": impact.legacy_nodes.MMDetLoader,
+#         "MaskPainter": impact.legacy_nodes.MaskPainter,
+#         "SegsMaskCombine": impact.legacy_nodes.SegsMaskCombine,
+#         "BboxDetectorForEach": impact.legacy_nodes.BboxDetectorForEach,
+#         "SegmDetectorForEach": impact.legacy_nodes.SegmDetectorForEach,
+#         "BboxDetectorCombined": impact.legacy_nodes.BboxDetectorCombined,
+#         "SegmDetectorCombined": impact.legacy_nodes.SegmDetectorCombined,
+#     })
+#
+#     NODE_DISPLAY_NAME_MAPPINGS.update({
+#         "MaskPainter": "MaskPainter (Deprecated)",
+#         "MMDetLoader": "MMDetLoader (Legacy)",
+#         "SegsMaskCombine": "SegsMaskCombine (Legacy)",
+#         "BboxDetectorForEach": "BboxDetectorForEach (Legacy)",
+#         "SegmDetectorForEach": "SegmDetectorForEach (Legacy)",
+#         "BboxDetectorCombined": "BboxDetectorCombined (Legacy)",
+#         "SegmDetectorCombined": "SegmDetectorCombined (Legacy)",
+#     })
 
 try:
     import impact.subpack_nodes

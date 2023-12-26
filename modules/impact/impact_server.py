@@ -23,35 +23,35 @@ from io import BytesIO
 import random
 
 
-@server.PromptServer.instance.routes.post("/upload/temp")
-async def upload_image(request):
-    upload_dir = folder_paths.get_temp_directory()
-
-    if not os.path.exists(upload_dir):
-        os.makedirs(upload_dir)
-    
-    post = await request.post()
-    image = post.get("image")
-
-    if image and image.file:
-        filename = image.filename
-        if not filename:
-            return web.Response(status=400)
-
-        split = os.path.splitext(filename)
-        i = 1
-        while os.path.exists(os.path.join(upload_dir, filename)):
-            filename = f"{split[0]} ({i}){split[1]}"
-            i += 1
-
-        filepath = os.path.join(upload_dir, filename)
-
-        with open(filepath, "wb") as f:
-            f.write(image.file.read())
-        
-        return web.json_response({"name": filename})
-    else:
-        return web.Response(status=400)
+# @server.PromptServer.instance.routes.post("/upload/temp")
+# async def upload_image(request):
+#     upload_dir = folder_paths.get_temp_directory()
+#
+#     if not os.path.exists(upload_dir):
+#         os.makedirs(upload_dir)
+#
+#     post = await request.post()
+#     image = post.get("image")
+#
+#     if image and image.file:
+#         filename = image.filename
+#         if not filename:
+#             return web.Response(status=400)
+#
+#         split = os.path.splitext(filename)
+#         i = 1
+#         while os.path.exists(os.path.join(upload_dir, filename)):
+#             filename = f"{split[0]} ({i}){split[1]}"
+#             i += 1
+#
+#         filepath = os.path.join(upload_dir, filename)
+#
+#         with open(filepath, "wb") as f:
+#             f.write(image.file.read())
+#
+#         return web.json_response({"name": filename})
+#     else:
+#         return web.Response(status=400)
 
 
 sam_predictor = None
@@ -90,245 +90,244 @@ def async_prepare_sam(image_dir, model_name, filename):
         sam_predictor.model.cpu()
 
 
-@server.PromptServer.instance.routes.post("/sam/prepare")
-async def sam_prepare(request):
-    global sam_predictor
-    global last_prepare_data
-    data = await request.json()
-
-    with sam_lock:
-        if last_prepare_data is not None and last_prepare_data == data:
-            # already loaded: skip -- prevent redundant loading
-            return web.Response(status=200)
-
-        last_prepare_data = data
-
-        model_name = 'sam_vit_b_01ec64.pth'
-        if data['sam_model_name'] == 'auto':
-            model_name = impact.config.get_config()['sam_editor_model']
-
-        model_name = os.path.join(impact_pack.model_path, "sams", model_name)
-
-        print(f"[INFO] ComfyUI-Impact-Pack: Loading SAM model '{impact_pack.model_path}'")
-
-        filename, image_dir = folder_paths.annotated_filepath(data["filename"])
-
-        if image_dir is None:
-            typ = data['type'] if data['type'] != '' else 'output'
-            image_dir = folder_paths.get_directory_by_type(typ)
-            if data['subfolder'] is not None and data['subfolder'] != '':
-                image_dir += f"/{data['subfolder']}"
-
-        if image_dir is None:
-            return web.Response(status=400)
-
-        thread = threading.Thread(target=async_prepare_sam, args=(image_dir, model_name, filename,))
-        thread.start()
-
-        print(f"[INFO] ComfyUI-Impact-Pack: SAM model loaded. ")
-
-
-@server.PromptServer.instance.routes.post("/sam/release")
-async def release_sam(request):
-    global sam_predictor
-
-    with sam_lock:
-        del sam_predictor
-        sam_predictor = None
-
-    print(f"[INFO] ComfyUI-Impact-Pack: unloading SAM model")
-
-
-@server.PromptServer.instance.routes.post("/sam/detect")
-async def sam_detect(request):
-    global sam_predictor
-    with sam_lock:
-        if sam_predictor is not None:
-            if impact.config.get_config()['sam_editor_cpu']:
-                device = 'cpu'
-            else:
-                device = comfy.model_management.get_torch_device()
-
-            sam_predictor.model.to(device=device)
-            try:
-                data = await request.json()
-
-                positive_points = data['positive_points']
-                negative_points = data['negative_points']
-                threshold = data['threshold']
-
-                points = []
-                plabs = []
-
-                for p in positive_points:
-                    points.append(p)
-                    plabs.append(1)
-
-                for p in negative_points:
-                    points.append(p)
-                    plabs.append(0)
-
-                detected_masks = core.sam_predict(sam_predictor, points, plabs, None, threshold)
-                mask = core.combine_masks2(detected_masks)
-
-                if mask is None:
-                    return web.Response(status=400)
-
-                image = mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])).movedim(1, -1).expand(-1, -1, -1, 3)
-                i = 255. * image.cpu().numpy()
-
-                img = Image.fromarray(np.clip(i[0], 0, 255).astype(np.uint8))
-
-                img_buffer = io.BytesIO()
-                img.save(img_buffer, format='png')
-
-                headers = {'Content-Type': 'image/png'}
-            finally:
-                sam_predictor.model.to(device="cpu")
-
-            return web.Response(body=img_buffer.getvalue(), headers=headers)
-
-        else:
-            return web.Response(status=400)
+# @server.PromptServer.instance.routes.post("/sam/prepare")
+# async def sam_prepare(request):
+#     global sam_predictor
+#     global last_prepare_data
+#     data = await request.json()
+#
+#     with sam_lock:
+#         if last_prepare_data is not None and last_prepare_data == data:
+#             # already loaded: skip -- prevent redundant loading
+#             return web.Response(status=200)
+#
+#         last_prepare_data = data
+#
+#         model_name = 'sam_vit_b_01ec64.pth'
+#         if data['sam_model_name'] == 'auto':
+#             model_name = impact.config.get_config()['sam_editor_model']
+#
+#         model_name = os.path.join(impact_pack.model_path, "sams", model_name)
+#
+#         print(f"[INFO] ComfyUI-Impact-Pack: Loading SAM model '{impact_pack.model_path}'")
+#
+#         filename, image_dir = folder_paths.annotated_filepath(data["filename"])
+#
+#         if image_dir is None:
+#             typ = data['type'] if data['type'] != '' else 'output'
+#             image_dir = folder_paths.get_directory_by_type(typ)
+#             if data['subfolder'] is not None and data['subfolder'] != '':
+#                 image_dir += f"/{data['subfolder']}"
+#
+#         if image_dir is None:
+#             return web.Response(status=400)
+#
+#         thread = threading.Thread(target=async_prepare_sam, args=(image_dir, model_name, filename,))
+#         thread.start()
+#
+#         print(f"[INFO] ComfyUI-Impact-Pack: SAM model loaded. ")
+#
+#
+# @server.PromptServer.instance.routes.post("/sam/release")
+# async def release_sam(request):
+#     global sam_predictor
+#
+#     with sam_lock:
+#         del sam_predictor
+#         sam_predictor = None
+#
+#     print(f"[INFO] ComfyUI-Impact-Pack: unloading SAM model")
 
 
-@server.PromptServer.instance.routes.get("/impact/wildcards/list")
-async def wildcards_list(request):
-    data = {'data': impact.wildcards.get_wildcard_list()}
-    return web.json_response(data)
+# @server.PromptServer.instance.routes.post("/sam/detect")
+# async def sam_detect(request):
+#     global sam_predictor
+#     with sam_lock:
+#         if sam_predictor is not None:
+#             if impact.config.get_config()['sam_editor_cpu']:
+#                 device = 'cpu'
+#             else:
+#                 device = comfy.model_management.get_torch_device()
+#
+#             sam_predictor.model.to(device=device)
+#             try:
+#                 data = await request.json()
+#
+#                 positive_points = data['positive_points']
+#                 negative_points = data['negative_points']
+#                 threshold = data['threshold']
+#
+#                 points = []
+#                 plabs = []
+#
+#                 for p in positive_points:
+#                     points.append(p)
+#                     plabs.append(1)
+#
+#                 for p in negative_points:
+#                     points.append(p)
+#                     plabs.append(0)
+#
+#                 detected_masks = core.sam_predict(sam_predictor, points, plabs, None, threshold)
+#                 mask = core.combine_masks2(detected_masks)
+#
+#                 if mask is None:
+#                     return web.Response(status=400)
+#
+#                 image = mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])).movedim(1, -1).expand(-1, -1, -1, 3)
+#                 i = 255. * image.cpu().numpy()
+#
+#                 img = Image.fromarray(np.clip(i[0], 0, 255).astype(np.uint8))
+#
+#                 img_buffer = io.BytesIO()
+#                 img.save(img_buffer, format='png')
+#
+#                 headers = {'Content-Type': 'image/png'}
+#             finally:
+#                 sam_predictor.model.to(device="cpu")
+#
+#             return web.Response(body=img_buffer.getvalue(), headers=headers)
+#
+#         else:
+#             return web.Response(status=400)
 
 
-@server.PromptServer.instance.routes.post("/impact/wildcards")
-async def populate_wildcards(request):
-    data = await request.json()
-    populated = wildcards.process(data['text'], data.get('seed', None))
-    return web.json_response({"text": populated})
-
+# @server.PromptServer.instance.routes.get("/impact/wildcards/list")
+# async def wildcards_list(request):
+#     data = {'data': impact.wildcards.get_wildcard_list()}
+#     return web.json_response(data)
+#
+#
+# @server.PromptServer.instance.routes.post("/impact/wildcards")
+# async def populate_wildcards(request):
+#     data = await request.json()
+#     populated = wildcards.process(data['text'], data.get('seed', None))
+#     return web.json_response({"text": populated})
 
 segs_picker_map = {}
 
-@server.PromptServer.instance.routes.get("/impact/segs/picker/count")
-async def segs_picker_count(request):
-    node_id = request.rel_url.query.get('id', '')
-
-    if node_id in segs_picker_map:
-        res = len(segs_picker_map[node_id])
-        return web.Response(status=200, text=str(res))
-
-    return web.Response(status=400)
-
-
-@server.PromptServer.instance.routes.get("/impact/segs/picker/view")
-async def segs_picker(request):
-    node_id = request.rel_url.query.get('id', '')
-    idx = int(request.rel_url.query.get('idx', ''))
-
-    if node_id in segs_picker_map and idx < len(segs_picker_map[node_id]):
-        img = to_tensor(segs_picker_map[node_id][idx]).permute(0, 3, 1, 2).squeeze(0)
-        pil = torchvision.transforms.ToPILImage('RGB')(img)
-
-        image_bytes = BytesIO()
-        pil.save(image_bytes, format="PNG")
-        image_bytes.seek(0)
-        return web.Response(status=200, body=image_bytes, content_type='image/png', headers={"Content-Disposition": f"filename={node_id}{idx}.png"})
-
-    return web.Response(status=400)
-
-
-@server.PromptServer.instance.routes.get("/view/validate")
-async def view_validate(request):
-    if "filename" in request.rel_url.query:
-        filename = request.rel_url.query["filename"]
-        subfolder = request.rel_url.query["subfolder"]
-        filename, base_dir = folder_paths.annotated_filepath(filename)
-
-        if filename == '' or filename[0] == '/' or '..' in filename:
-            return web.Response(status=400)
-
-        if base_dir is None:
-            base_dir = folder_paths.get_input_directory()
-
-        file = os.path.join(base_dir, subfolder, filename)
-
-        if os.path.isfile(file):
-            return web.Response(status=200)
-
-    return web.Response(status=400)
+# @server.PromptServer.instance.routes.get("/impact/segs/picker/count")
+# async def segs_picker_count(request):
+#     node_id = request.rel_url.query.get('id', '')
+#
+#     if node_id in segs_picker_map:
+#         res = len(segs_picker_map[node_id])
+#         return web.Response(status=200, text=str(res))
+#
+#     return web.Response(status=400)
+#
+#
+# @server.PromptServer.instance.routes.get("/impact/segs/picker/view")
+# async def segs_picker(request):
+#     node_id = request.rel_url.query.get('id', '')
+#     idx = int(request.rel_url.query.get('idx', ''))
+#
+#     if node_id in segs_picker_map and idx < len(segs_picker_map[node_id]):
+#         img = to_tensor(segs_picker_map[node_id][idx]).permute(0, 3, 1, 2).squeeze(0)
+#         pil = torchvision.transforms.ToPILImage('RGB')(img)
+#
+#         image_bytes = BytesIO()
+#         pil.save(image_bytes, format="PNG")
+#         image_bytes.seek(0)
+#         return web.Response(status=200, body=image_bytes, content_type='image/png', headers={"Content-Disposition": f"filename={node_id}{idx}.png"})
+#
+#     return web.Response(status=400)
 
 
-@server.PromptServer.instance.routes.get("/impact/validate/pb_id_image")
-async def view_validate(request):
-    if "id" in request.rel_url.query:
-        pb_id = request.rel_url.query["id"]
-
-        if pb_id not in core.preview_bridge_image_id_map:
-            return web.Response(status=400)
-
-        file = core.preview_bridge_image_id_map[pb_id]
-        if os.path.isfile(file):
-            return web.Response(status=200)
-
-    return web.Response(status=400)
-
-
-@server.PromptServer.instance.routes.get("/impact/set/pb_id_image")
-async def set_previewbridge_image(request):
-    if "filename" in request.rel_url.query:
-        node_id = request.rel_url.query["node_id"]
-        filename = request.rel_url.query["filename"]
-        path_type = request.rel_url.query["type"]
-        subfolder = request.rel_url.query["subfolder"]
-        filename, output_dir = folder_paths.annotated_filepath(filename)
-
-        if filename == '' or filename[0] == '/' or '..' in filename:
-            return web.Response(status=400)
-
-        if output_dir is None:
-            if path_type == 'input':
-                output_dir = folder_paths.get_input_directory()
-            elif path_type == 'output':
-                output_dir = folder_paths.get_output_directory()
-            else:
-                output_dir = folder_paths.get_temp_directory()
-
-        file = os.path.join(output_dir, subfolder, filename)
-        item = {
-            'filename': filename,
-            'type': path_type,
-            'subfolder': subfolder,
-        }
-        pb_id = core.set_previewbridge_image(node_id, file, item)
-
-        return web.Response(status=200, text=pb_id)
-
-    return web.Response(status=400)
-
-
-@server.PromptServer.instance.routes.get("/impact/get/pb_id_image")
-async def get_previewbridge_image(request):
-    if "id" in request.rel_url.query:
-        pb_id = request.rel_url.query["id"]
-
-        if pb_id in core.preview_bridge_image_id_map:
-            _, path_item = core.preview_bridge_image_id_map[pb_id]
-            return web.json_response(path_item)
-
-    return web.Response(status=400)
-
-
-@server.PromptServer.instance.routes.get("/impact/view/pb_id_image")
-async def view_previewbridge_image(request):
-    if "id" in request.rel_url.query:
-        pb_id = request.rel_url.query["id"]
-
-        if pb_id in core.preview_bridge_image_id_map:
-            file = core.preview_bridge_image_id_map[pb_id]
-
-            with Image.open(file) as img:
-                filename = os.path.basename(file)
-                return web.FileResponse(file, headers={"Content-Disposition": f"filename=\"{filename}\""})
-
-    return web.Response(status=400)
+# @server.PromptServer.instance.routes.get("/view/validate")
+# async def view_validate(request):
+#     if "filename" in request.rel_url.query:
+#         filename = request.rel_url.query["filename"]
+#         subfolder = request.rel_url.query["subfolder"]
+#         filename, base_dir = folder_paths.annotated_filepath(filename)
+#
+#         if filename == '' or filename[0] == '/' or '..' in filename:
+#             return web.Response(status=400)
+#
+#         if base_dir is None:
+#             base_dir = folder_paths.get_input_directory()
+#
+#         file = os.path.join(base_dir, subfolder, filename)
+#
+#         if os.path.isfile(file):
+#             return web.Response(status=200)
+#
+#     return web.Response(status=400)
+#
+#
+# @server.PromptServer.instance.routes.get("/impact/validate/pb_id_image")
+# async def view_validate(request):
+#     if "id" in request.rel_url.query:
+#         pb_id = request.rel_url.query["id"]
+#
+#         if pb_id not in core.preview_bridge_image_id_map:
+#             return web.Response(status=400)
+#
+#         file = core.preview_bridge_image_id_map[pb_id]
+#         if os.path.isfile(file):
+#             return web.Response(status=200)
+#
+#     return web.Response(status=400)
+#
+#
+# @server.PromptServer.instance.routes.get("/impact/set/pb_id_image")
+# async def set_previewbridge_image(request):
+#     if "filename" in request.rel_url.query:
+#         node_id = request.rel_url.query["node_id"]
+#         filename = request.rel_url.query["filename"]
+#         path_type = request.rel_url.query["type"]
+#         subfolder = request.rel_url.query["subfolder"]
+#         filename, output_dir = folder_paths.annotated_filepath(filename)
+#
+#         if filename == '' or filename[0] == '/' or '..' in filename:
+#             return web.Response(status=400)
+#
+#         if output_dir is None:
+#             if path_type == 'input':
+#                 output_dir = folder_paths.get_input_directory()
+#             elif path_type == 'output':
+#                 output_dir = folder_paths.get_output_directory()
+#             else:
+#                 output_dir = folder_paths.get_temp_directory()
+#
+#         file = os.path.join(output_dir, subfolder, filename)
+#         item = {
+#             'filename': filename,
+#             'type': path_type,
+#             'subfolder': subfolder,
+#         }
+#         pb_id = core.set_previewbridge_image(node_id, file, item)
+#
+#         return web.Response(status=200, text=pb_id)
+#
+#     return web.Response(status=400)
+#
+#
+# @server.PromptServer.instance.routes.get("/impact/get/pb_id_image")
+# async def get_previewbridge_image(request):
+#     if "id" in request.rel_url.query:
+#         pb_id = request.rel_url.query["id"]
+#
+#         if pb_id in core.preview_bridge_image_id_map:
+#             _, path_item = core.preview_bridge_image_id_map[pb_id]
+#             return web.json_response(path_item)
+#
+#     return web.Response(status=400)
+#
+#
+# @server.PromptServer.instance.routes.get("/impact/view/pb_id_image")
+# async def view_previewbridge_image(request):
+#     if "id" in request.rel_url.query:
+#         pb_id = request.rel_url.query["id"]
+#
+#         if pb_id in core.preview_bridge_image_id_map:
+#             file = core.preview_bridge_image_id_map[pb_id]
+#
+#             with Image.open(file) as img:
+#                 filename = os.path.basename(file)
+#                 return web.FileResponse(file, headers={"Content-Disposition": f"filename=\"{filename}\""})
+#
+#     return web.Response(status=400)
 
 
 def onprompt_for_switch(json_data):
@@ -523,4 +522,4 @@ def onprompt(json_data):
     return json_data
 
 
-server.PromptServer.instance.add_on_prompt_handler(onprompt)
+#server.PromptServer.instance.add_on_prompt_handler(onprompt)
