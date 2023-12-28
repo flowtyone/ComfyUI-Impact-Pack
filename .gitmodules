@@ -1,3 +1,4 @@
 [submodule "impact_subpack"]
 	path = impact_subpack
 	url = https://github.com/flowtyone/ComfyUI-Impact-Subpack.git
+	branch = flowt
