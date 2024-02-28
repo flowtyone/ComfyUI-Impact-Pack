@@ -1,5 +1,6 @@
 import os
 import threading
+import traceback
 
 from aiohttp import web
 
@@ -233,7 +234,23 @@ segs_picker_map = {}
 #
 #     return web.Response(status=400)
 
-
+# @server.PromptServer.instance.routes.get("/impact/segs/picker/view")
+# async def segs_picker(request):
+#     node_id = request.rel_url.query.get('id', '')
+#     idx = int(request.rel_url.query.get('idx', ''))
+#
+#     if node_id in segs_picker_map and idx < len(segs_picker_map[node_id]):
+#         img = to_tensor(segs_picker_map[node_id][idx]).permute(0, 3, 1, 2).squeeze(0)
+#         pil = torchvision.transforms.ToPILImage('RGB')(img)
+#
+#         image_bytes = BytesIO()
+#         pil.save(image_bytes, format="PNG")
+#         image_bytes.seek(0)
+#         return web.Response(status=200, body=image_bytes, content_type='image/png', headers={"Content-Disposition": f"filename={node_id}{idx}.png"})
+#
+#     return web.Response(status=400)
+#
+#
 # @server.PromptServer.instance.routes.get("/view/validate")
 # async def view_validate(request):
 #     if "filename" in request.rel_url.query:
@@ -272,33 +289,36 @@ segs_picker_map = {}
 #
 # @server.PromptServer.instance.routes.get("/impact/set/pb_id_image")
 # async def set_previewbridge_image(request):
-#     if "filename" in request.rel_url.query:
-#         node_id = request.rel_url.query["node_id"]
-#         filename = request.rel_url.query["filename"]
-#         path_type = request.rel_url.query["type"]
-#         subfolder = request.rel_url.query["subfolder"]
-#         filename, output_dir = folder_paths.annotated_filepath(filename)
+#     try:
+#         if "filename" in request.rel_url.query:
+#             node_id = request.rel_url.query["node_id"]
+#             filename = request.rel_url.query["filename"]
+#             path_type = request.rel_url.query["type"]
+#             subfolder = request.rel_url.query["subfolder"]
+#             filename, output_dir = folder_paths.annotated_filepath(filename)
 #
-#         if filename == '' or filename[0] == '/' or '..' in filename:
-#             return web.Response(status=400)
+#             if filename == '' or filename[0] == '/' or '..' in filename:
+#                 return web.Response(status=400)
 #
-#         if output_dir is None:
-#             if path_type == 'input':
-#                 output_dir = folder_paths.get_input_directory()
-#             elif path_type == 'output':
-#                 output_dir = folder_paths.get_output_directory()
-#             else:
-#                 output_dir = folder_paths.get_temp_directory()
+#             if output_dir is None:
+#                 if path_type == 'input':
+#                     output_dir = folder_paths.get_input_directory()
+#                 elif path_type == 'output':
+#                     output_dir = folder_paths.get_output_directory()
+#                 else:
+#                     output_dir = folder_paths.get_temp_directory()
 #
-#         file = os.path.join(output_dir, subfolder, filename)
-#         item = {
-#             'filename': filename,
-#             'type': path_type,
-#             'subfolder': subfolder,
-#         }
-#         pb_id = core.set_previewbridge_image(node_id, file, item)
+#             file = os.path.join(output_dir, subfolder, filename)
+#             item = {
+#                 'filename': filename,
+#                 'type': path_type,
+#                 'subfolder': subfolder,
+#             }
+#             pb_id = core.set_previewbridge_image(node_id, file, item)
 #
-#         return web.Response(status=200, text=pb_id)
+#             return web.Response(status=200, text=pb_id)
+#     except Exception:
+#         traceback.print_exc()
 #
 #     return web.Response(status=400)
 #
@@ -333,6 +353,7 @@ segs_picker_map = {}
 def onprompt_for_switch(json_data):
     inversed_switch_info = {}
     onprompt_switch_info = {}
+    onprompt_cond_branch_info = {}
 
     for k, v in json_data['prompt'].items():
         if 'class_type' not in v:
@@ -363,6 +384,21 @@ def onprompt_for_switch(json_data):
                 else:
                     onprompt_switch_info[k] = select_input
 
+        elif cls == 'ImpactConditionalBranchSelMode':
+            if 'sel_mode' in v['inputs'] and v['inputs']['sel_mode'] and 'cond' in v['inputs']:
+                cond_input = v['inputs']['cond']
+                if isinstance(cond_input, list) and len(cond_input) == 2:
+                    input_node = json_data['prompt'][cond_input[0]]
+                    if (input_node['class_type'] == 'ImpactValueReceiver' and 'inputs' in input_node
+                            and 'value' in input_node['inputs'] and 'typ' in input_node['inputs']):
+                        if 'BOOLEAN' == input_node['inputs']['typ']:
+                            try:
+                                onprompt_cond_branch_info[k] = input_node['inputs']['value'].lower() == "true"
+                            except:
+                                pass
+                else:
+                    onprompt_cond_branch_info[k] = cond_input
+
     for k, v in json_data['prompt'].items():
         disable_targets = set()
 
@@ -376,6 +412,12 @@ def onprompt_for_switch(json_data):
             selected_slot_name = f"input{onprompt_switch_info[k]}"
             for kk, vv in v['inputs'].items():
                 if kk != selected_slot_name and kk.startswith('input'):
+                    disable_targets.add(kk)
+
+        if k in onprompt_cond_branch_info:
+            selected_slot_name = "tt_value" if onprompt_cond_branch_info[k] else "ff_value"
+            for kk, vv in v['inputs'].items():
+                if kk in ['tt_value', 'ff_value'] and kk != selected_slot_name:
                     disable_targets.add(kk)
 
         for kk in disable_targets:
@@ -454,8 +496,12 @@ def onprompt_populate_wildcards(json_data):
                             input_seed = int(input_node['inputs']['value'])
                             if not isinstance(input_seed, int):
                                 continue
+                        if input_node['class_type'] == 'Seed (rgthree)':
+                            input_seed = int(input_node['inputs']['seed'])
+                            if not isinstance(input_seed, int):
+                                continue
                         else:
-                            print(f"[Impact Pack] Only ImpactInt and Primitive Node are allowed as the seed for '{v['class_type']}'. It will be ignored. ")
+                            print(f"[Impact Pack] Only `ImpactInt`, `Seed (rgthree)` and `Primitive` Node are allowed as the seed for '{v['class_type']}'. It will be ignored. ")
                             continue
                     except:
                         continue

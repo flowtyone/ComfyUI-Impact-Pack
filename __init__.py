@@ -20,7 +20,6 @@ custom_wildcards_path = os.path.join(os.path.dirname(__file__), "custom_wildcard
 
 sys.path.append(modules_path)
 
-
 import impact.config
 import impact.sample_error_enhancer
 print(f"### Loading: ComfyUI-Impact-Pack ({impact.config.version})")
@@ -106,6 +105,8 @@ from impact.segs_nodes import *
 from impact.special_samplers import *
 from impact.hf_nodes import *
 from impact.bridge_nodes import *
+from impact.hook_nodes import *
+from impact.animatediff_nodes import *
 
 import threading
 
@@ -139,6 +140,7 @@ NODE_CLASS_MAPPINGS = {
     "DetailerForEachDebug": DetailerForEachTest,
     "DetailerForEachPipe": DetailerForEachPipe,
     "DetailerForEachDebugPipe": DetailerForEachTestPipe,
+    "DetailerForEachPipeForAnimateDiff": DetailerForEachPipeForAnimateDiff,
 
     "SAMDetectorCombined": SAMDetectorCombined,
     "SAMDetectorSegmented": SAMDetectorSegmented,
@@ -173,15 +175,21 @@ NODE_CLASS_MAPPINGS = {
     "TwoSamplersForMaskUpscalerProviderPipe": TwoSamplersForMaskUpscalerProviderPipe,
 
     "PixelKSampleHookCombine": PixelKSampleHookCombine,
-    "DetailerHookCombine": DetailerHookCombine,
     "DenoiseScheduleHookProvider": DenoiseScheduleHookProvider,
+    "StepsScheduleHookProvider": StepsScheduleHookProvider,
     "CfgScheduleHookProvider": CfgScheduleHookProvider,
     "NoiseInjectionHookProvider": NoiseInjectionHookProvider,
     "UnsamplerHookProvider": UnsamplerHookProvider,
+    "CoreMLDetailerHookProvider": CoreMLDetailerHookProvider,
+    "PreviewDetailerHookProvider": PreviewDetailerHookProvider,
+
+    "DetailerHookCombine": DetailerHookCombine,
     "NoiseInjectionDetailerHookProvider": NoiseInjectionDetailerHookProvider,
     "UnsamplerDetailerHookProvider": UnsamplerDetailerHookProvider,
-    "CoreMLDetailerHookProvider": CoreMLDetailerHookProvider,
     "DenoiseSchedulerDetailerHookProvider": DenoiseSchedulerDetailerHookProvider,
+    "SEGSOrderedFilterDetailerHookProvider": SEGSOrderedFilterDetailerHookProvider,
+    "SEGSRangeFilterDetailerHookProvider": SEGSRangeFilterDetailerHookProvider,
+    "SEGSLabelFilterDetailerHookProvider": SEGSLabelFilterDetailerHookProvider,
 
     "BitwiseAndMask": BitwiseAndMask,
     "SubtractMask": SubtractMask,
@@ -198,6 +206,7 @@ NODE_CLASS_MAPPINGS = {
     "MaskListToMaskBatch": MaskListToMaskBatch,
     "ImageListToImageBatch": ImageListToImageBatch,
     "SetDefaultImageForSEGS": DefaultImageForSEGS,
+    "RemoveImageFromSEGS": RemoveImageFromSEGS,
 
     "BboxDetectorSEGS": BboxDetectorForEach,
     "SegmDetectorSEGS": SegmDetectorForEach,
@@ -206,6 +215,9 @@ NODE_CLASS_MAPPINGS = {
     "ImpactSimpleDetectorSEGS": SimpleDetectorForEach,
     "ImpactSimpleDetectorSEGSPipe": SimpleDetectorForEachPipe,
     "ImpactControlNetApplySEGS": ControlNetApplySEGS,
+    "ImpactControlNetApplyAdvancedSEGS": ControlNetApplyAdvancedSEGS,
+    "ImpactControlNetClearSEGS": ControlNetClearSEGS,
+    "ImpactIPAdapterApplySEGS": IPAdapterApplySEGS,
 
     "ImpactDecomposeSEGS": DecomposeSEGS,
     "ImpactAssembleSEGS": AssembleSEGS,
@@ -247,11 +259,13 @@ NODE_CLASS_MAPPINGS = {
     "SEGSDetailer": SEGSDetailer,
     "SEGSPaste": SEGSPaste,
     "SEGSPreview": SEGSPreview,
+    "SEGSPreviewCNet": SEGSPreviewCNet,
     "SEGSToImageList": SEGSToImageList,
     "ImpactSEGSToMaskList": SEGSToMaskList,
     "ImpactSEGSToMaskBatch": SEGSToMaskBatch,
     "ImpactSEGSConcat": SEGSConcat,
     "ImpactSEGSPicker": SEGSPicker,
+    "ImpactMakeTileSEGS": MakeTileSEGS,
 
     "SEGSDetailerForAnimateDiff": SEGSDetailerForAnimateDiff,
 
@@ -273,17 +287,23 @@ NODE_CLASS_MAPPINGS = {
     "ImpactCombineConditionings": CombineConditionings,
     "ImpactConcatConditionings": ConcatConditionings,
 
+    "ImpactSEGSLabelAssign": SEGSLabelAssign,
     "ImpactSEGSLabelFilter": SEGSLabelFilter,
     "ImpactSEGSRangeFilter": SEGSRangeFilter,
     "ImpactSEGSOrderedFilter": SEGSOrderedFilter,
 
     "ImpactCompare": ImpactCompare,
     "ImpactConditionalBranch": ImpactConditionalBranch,
+    "ImpactConditionalBranchSelMode": ImpactConditionalBranchSelMode,
+    "ImpactIfNone": ImpactIfNone,
+    "ImpactConvertDataType": ImpactConvertDataType,
+    "ImpactLogicalOperators": ImpactLogicalOperators,
     "ImpactInt": ImpactInt,
     "ImpactFloat": ImpactFloat,
     "ImpactValueSender": ImpactValueSender,
     "ImpactValueReceiver": ImpactValueReceiver,
     "ImpactImageInfo": ImpactImageInfo,
+    "ImpactLatentInfo": ImpactLatentInfo,
     "ImpactMinMax": ImpactMinMax,
     "ImpactNeg": ImpactNeg,
     "ImpactConditionalStopIteration": ImpactConditionalStopIteration,
@@ -310,6 +330,8 @@ NODE_CLASS_MAPPINGS = {
 
 
 NODE_DISPLAY_NAME_MAPPINGS = {
+    "SAMLoader": "SAMLoader (Impact)",
+
     "BboxDetectorSEGS": "BBOX Detector (SEGS)",
     "SegmDetectorSEGS": "SEGM Detector (SEGS)",
     "ONNXDetectorSEGS": "ONNX Detector (SEGS/legacy) - use BBOXDetector",
@@ -317,6 +339,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ImpactSimpleDetectorSEGS": "Simple Detector (SEGS)",
     "ImpactSimpleDetectorSEGSPipe": "Simple Detector (SEGS/pipe)",
     "ImpactControlNetApplySEGS": "ControlNetApply (SEGS)",
+    "ImpactControlNetApplyAdvancedSEGS": "ControlNetApplyAdvanced (SEGS)",
+    "ImpactIPAdapterApplySEGS": "IPAdapterApply (SEGS)",
 
     "BboxDetectorCombined_v2": "BBOX Detector (combined)",
     "SegmDetectorCombined_v2": "SEGM Detector (combined)",
@@ -335,12 +359,13 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DetailerForEachPipe": "Detailer (SEGS/pipe)",
     "DetailerForEachDebug": "DetailerDebug (SEGS)",
     "DetailerForEachDebugPipe": "DetailerDebug (SEGS/pipe)",
-    "SEGSDetailerForAnimateDiff": "Detailer For AnimateDiff (SEGS/pipe)",
+    "SEGSDetailerForAnimateDiff": "SEGSDetailer For AnimateDiff (SEGS/pipe)",
+    "DetailerForEachPipeForAnimateDiff": "Detailer For AnimateDiff (SEGS/pipe)",
 
     "SAMDetectorCombined": "SAMDetector (combined)",
     "SAMDetectorSegmented": "SAMDetector (segmented)",
     "FaceDetailerPipe": "FaceDetailer (pipe)",
-    "MaskDetailerPipe": "MaskDetailer (Pipe)",
+    "MaskDetailerPipe": "MaskDetailer (pipe)",
 
     "FromDetailerPipeSDXL": "FromDetailer (SDXL/pipe)",
     "BasicPipeToDetailerPipeSDXL": "BasicPipe -> DetailerPipe (SDXL)",
@@ -363,6 +388,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
 
     "ImpactKSamplerBasicPipe": "KSampler (pipe)",
     "ImpactKSamplerAdvancedBasicPipe": "KSampler (Advanced/pipe)",
+    "ImpactSEGSLabelAssign": "SEGS Assign (label)",
     "ImpactSEGSLabelFilter": "SEGS Filter (label)",
     "ImpactSEGSRangeFilter": "SEGS Filter (range)",
     "ImpactSEGSOrderedFilter": "SEGS Filter (ordered)",
@@ -370,6 +396,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ImpactSEGSToMaskList": "SEGS to Mask List",
     "ImpactSEGSToMaskBatch": "SEGS to Mask Batch",
     "ImpactSEGSPicker": "Picker (SEGS)",
+    "ImpactMakeTileSEGS": "Make Tile SEGS",
 
     "ImpactDecomposeSEGS": "Decompose (SEGS)",
     "ImpactAssembleSEGS": "Assemble (SEGS)",
@@ -399,6 +426,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ImpactStringSelector": "String Selector",
     "ImpactIsNotEmptySEGS": "SEGS isn't Empty",
     "SetDefaultImageForSEGS": "Set Default Image for SEGS",
+    "RemoveImageFromSEGS": "Remove Image from SEGS",
 
     "RemoveNoiseMask": "Remove Noise Mask",
 
@@ -418,7 +446,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ImpactSEGSClassify": "SEGS Classify",
 
     "LatentSwitch": "Switch (latent/legacy)",
-    "SEGSSwitch": "Switch (SEGS/legacy)"
+    "SEGSSwitch": "Switch (SEGS/legacy)",
+
+    "SEGSPreviewCNet": "SEGSPreview (CNET Image)"
 }
 
 # if not impact.config.get_config()['mmdet_skip']:
@@ -461,3 +491,14 @@ except Exception as e:
 
 WEB_DIRECTORY = "js"
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS']
+
+
+try:
+    import cm_global
+    cm_global.register_extension('ComfyUI-Impact-Pack',
+                                 {'version': config.version_code,
+                                  'name': 'Impact Pack',
+                                  'nodes': set(NODE_CLASS_MAPPINGS.keys()),
+                                  'description': 'This extension provides inpainting functionality based on the detector and detailer, along with convenient workflow features like wildcards and logics.', })
+except:
+    pass
