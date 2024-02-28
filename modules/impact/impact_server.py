@@ -55,40 +55,40 @@ import random
 #         return web.Response(status=400)
 
 
-sam_predictor = None
-default_sam_model_name = os.path.join(impact_pack.model_path, "sams", "sam_vit_b_01ec64.pth")
-
-sam_lock = threading.Condition()
-
-last_prepare_data = None
-
-
-def async_prepare_sam(image_dir, model_name, filename):
-    with sam_lock:
-        global sam_predictor
-
-        if 'vit_h' in model_name:
-            model_kind = 'vit_h'
-        elif 'vit_l' in model_name:
-            model_kind = 'vit_l'
-        else:
-            model_kind = 'vit_b'
-
-        sam_model = sam_model_registry[model_kind](checkpoint=model_name)
-        sam_predictor = SamPredictor(sam_model)
-
-        image_path = os.path.join(image_dir, filename)
-        image = nodes.LoadImage().load_image(image_path)[0]
-        image = np.clip(255. * image.cpu().numpy().squeeze(), 0, 255).astype(np.uint8)
-
-        if impact.config.get_config()['sam_editor_cpu']:
-            device = 'cpu'
-        else:
-            device = comfy.model_management.get_torch_device()
-
-        sam_predictor.model.to(device=device)
-        sam_predictor.set_image(image, "RGB")
-        sam_predictor.model.cpu()
+# sam_predictor = None
+# default_sam_model_name = os.path.join(impact_pack.model_path, "sams", "sam_vit_b_01ec64.pth")
+#
+# sam_lock = threading.Condition()
+#
+# last_prepare_data = None
+#
+#
+# def async_prepare_sam(image_dir, model_name, filename):
+#     with sam_lock:
+#         global sam_predictor
+#
+#         if 'vit_h' in model_name:
+#             model_kind = 'vit_h'
+#         elif 'vit_l' in model_name:
+#             model_kind = 'vit_l'
+#         else:
+#             model_kind = 'vit_b'
+#
+#         sam_model = sam_model_registry[model_kind](checkpoint=model_name)
+#         sam_predictor = SamPredictor(sam_model)
+#
+#         image_path = os.path.join(image_dir, filename)
+#         image = nodes.LoadImage().load_image(image_path)[0]
+#         image = np.clip(255. * image.cpu().numpy().squeeze(), 0, 255).astype(np.uint8)
+#
+#         if impact.config.get_config()['sam_editor_cpu']:
+#             device = 'cpu'
+#         else:
+#             device = comfy.model_management.get_torch_device()
+#
+#         sam_predictor.model.to(device=device)
+#         sam_predictor.set_image(image, "RGB")
+#         sam_predictor.model.cpu()
 
 
 # @server.PromptServer.instance.routes.post("/sam/prepare")
